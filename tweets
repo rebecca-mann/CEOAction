@@ -1,0 +1,58 @@
+library(tidyverse)
+library(ggplot2)
+library(lubridate)
+library(stringr)
+library(rtweet)
+
+ceoaction <- get_timeline("CEOAction", n = 3200)
+
+# text analysis
+library(quanteda)
+text <- select(ceoaction, status_id, text)
+tweet_corpus <- corpus(text)
+
+# add the date
+docvars(tweet_corpus, "Date") <- ceoaction$created_at
+summary(tweet_corpus) 
+
+tokeninfo <- summary(tweet_corpus)
+if (require(ggplot2))
+  ggplot(data = tokeninfo, aes(x = Date, y = Tokens, group = 1)) +
+  geom_line() +
+  geom_point() +
+  theme_bw()
+
+# most wordy tweet?
+tokeninfo[which.max(tokeninfo$Tokens), ]
+
+# key word patterns
+kwic(tweet_corpus, pattern = "diversity")
+kwic(tweet_corpus, pattern = phrase("advance diversity")) %>% head()
+kwic(tweet_corpus, pattern = "inclusion")
+
+# dfm tweets
+dfm_tweets <- dfm(tweet_corpus, remove_punct = TRUE)
+
+topfeatures(dfm_tweets, 20) # 20 most frequent words
+
+# top hashtags
+tag_dfm <- dfm_select(dfm_tweets, pattern = ("#*"))
+toptag <- names(topfeatures(tag_dfm, 50))
+head(toptag)
+
+# feature occurence matrix
+tag_fcm <- fcm(tag_dfm)
+topgat_fcm <- fcm_select(tag_fcm, pattern = toptag)
+textplot_network(topgat_fcm, min_freq = 0.1, edge_alpha = 0.8, edge_size = 5)
+
+# most frequent usernames
+user_dfm <- dfm_select(dfm_tweets, pattern = "@*")
+topuser <- names(topfeatures(user_dfm, 50))
+head(topuser)
+
+# wordcloud
+set.seed(100)
+textplot_wordcloud(dfm_tweets, min_count = 6, random_order = FALSE,
+                   rotation = .25,
+                   color = RColorBrewer::brewer.pal(8, "Dark2"))
+
