@@ -1,0 +1,25 @@
+library(tidyverse)
+library(stringr)
+library(rtweet)
+
+ceoaction <- get_timeline("CEOAction", n = 3200)
+
+library(ngram)
+modeldf <- ceoaction %>% select(status_id, created_at, text, source, favorite_count, retweet_count)
+
+count_words <- function(x) { 
+  wordcount(x)
+} 
+
+modeldf$wordcount <- sapply(modeldf$text, count_words)
+
+# Function to find certain words
+
+string <- c("diversity|diverse")
+modeldf$diverse <- modeldf$text
+
+detect_words <- function(x) {
+  stringr::str_detect(x, regex(string, ignore_case = TRUE))
+}
+
+modeldf$diverse <- sapply(modeldf$diverse, detect_words)
